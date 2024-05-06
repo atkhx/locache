@@ -40,7 +40,7 @@ func NewDefaultMetrics(prefix string) *DefaultMetrics {
 		Name:    fmt.Sprintf("%s_requests_time_ms", prefix),
 		Help:    "Cache request timings",
 		Buckets: prometheus.DefBuckets,
-	}, []string{})
+	}, []string{"method"})
 
 	itemsInCacheTotal := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: fmt.Sprintf("%s_items_total", prefix),
