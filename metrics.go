@@ -55,7 +55,7 @@ func NewDefaultMetrics(prefix string) *DefaultMetrics {
 }
 
 func (m *DefaultMetrics) MustRegister() {
-	prometheus.MustRegister(m.requestsCounter, m.requestsTimeHist)
+	prometheus.MustRegister(m.requestsCounter, m.requestsTimeHist, m.itemsInCacheTotal)
 }
 
 func (m *DefaultMetrics) AddHits(method string, count int) {
