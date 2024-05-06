@@ -30,21 +30,31 @@ type Cache[Key comparable, Value any] struct {
 	ctx context.Context
 	ttl time.Duration
 	mtx sync.RWMutex
+	mtr Metrics
 
 	items *list.List
 	index map[Key]*list.Element
 }
 
-func New[Key comparable, Value any](ctx context.Context, ttl time.Duration) *Cache[Key, Value] {
+func New[Key comparable, Value any](
+	ctx context.Context,
+	ttl time.Duration,
+	mtr Metrics,
+) *Cache[Key, Value] {
 	return &Cache[Key, Value]{
-		ctx:   ctx,
-		ttl:   ttl,
+		ctx: ctx,
+		ttl: ttl,
+		mtr: mtr,
+
 		items: list.New(),
 		index: make(map[Key]*list.Element),
 	}
 }
 
 func (c *Cache[Key, Value]) Get(key Key) (Value, bool) {
+	startTime := now()
+	defer c.mtr.ObserveRequest(MethodGet, startTime)
+
 	var val Value
 
 	c.mtx.RLock()
@@ -52,16 +62,23 @@ func (c *Cache[Key, Value]) Get(key Key) (Value, bool) {
 
 	element, found := c.index[key]
 	if !found {
+		c.mtr.AddMisses(MethodGet, 1)
 		return val, false
 	}
 
 	if item := element.Value.(*Item[Key, Value]); item.IsValid() {
+		c.mtr.AddHits(MethodGet, 1)
 		return item.val, true
 	}
+
+	c.mtr.AddMisses(MethodGet, 1)
 	return val, false
 }
 
 func (c *Cache[Key, Value]) Set(key Key, value Value) {
+	startTime := now()
+	defer c.mtr.ObserveRequest(MethodSet, startTime)
+
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -84,6 +101,9 @@ func (c *Cache[Key, Value]) Set(key Key, value Value) {
 }
 
 func (c *Cache[Key, Value]) Del(key Key) {
+	startTime := now()
+	defer c.mtr.ObserveRequest(MethodDel, startTime)
+
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -109,12 +129,16 @@ func (c *Cache[Key, Value]) getOrCreateElement(key Key) *list.Element {
 }
 
 func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error)) (Value, error) {
+	startTime := now()
+	defer c.mtr.ObserveRequest(MethodGetOrRefresh, startTime)
+
 	element := c.getOrCreateElement(key)
 
 	item := element.Value.(*Item[Key, Value])
 	item.mtx.Lock()
 
 	if item.IsValid() {
+		c.mtr.AddHits(MethodGetOrRefresh, 1)
 		val := item.val
 		item.mtx.Unlock()
 		return val, nil
@@ -122,6 +146,7 @@ func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error))
 
 	val, err := refresh()
 	if err != nil {
+		c.mtr.AddErrors(MethodGetOrRefresh, 1)
 		item.mtx.Unlock()
 		var emptyVal Value
 		return emptyVal, fmt.Errorf("refresh val: %w", err)
@@ -156,11 +181,15 @@ func (c *Cache[Key, Value]) SchedulePurge(purgeInterval time.Duration) chan stru
 }
 
 func (c *Cache[Key, Value]) Purge() {
+	startTime := now()
+	defer c.mtr.ObserveRequest(MethodPurge, startTime)
+
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
 	for element := c.items.Front(); element != nil; {
 		item := element.Value.(*Item[Key, Value])
+		item.mtx.Lock()
 		if item.exp.Before(now()) {
 			remove := element
 			element = element.Next()
@@ -169,5 +198,8 @@ func (c *Cache[Key, Value]) Purge() {
 		} else {
 			element = element.Next()
 		}
+		item.mtx.Unlock()
 	}
+
+	c.mtr.SetItemsCount(c.items.Len())
 }

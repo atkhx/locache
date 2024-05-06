@@ -68,7 +68,7 @@ func BenchmarkCache_Get(b *testing.B) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			cache := New[string, string](ctx, tc.itemsTTL)
+			cache := New[string, string](ctx, tc.itemsTTL, NewNopMetrics())
 			purgeDone := cache.SchedulePurge(tc.purgeInterval)
 
 			schedule(ctx, tc.readInterval, func() { cache.Get(bullets[rand.Intn(tc.bulletsCount)]) })
@@ -144,7 +144,7 @@ func BenchmarkCache_GetOrRefresh(b *testing.B) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			cache := New[string, string](ctx, tc.itemsTTL)
+			cache := New[string, string](ctx, tc.itemsTTL, NewNopMetrics())
 			purgeDone := cache.SchedulePurge(tc.purgeInterval)
 
 			schedule(ctx, tc.readInterval, func() { cache.Get(bullets[rand.Intn(tc.bulletsCount)]) })
