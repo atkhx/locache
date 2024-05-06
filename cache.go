@@ -189,7 +189,10 @@ func (c *Cache[Key, Value]) Purge() {
 
 	for element := c.items.Front(); element != nil; {
 		item := element.Value.(*Item[Key, Value])
-		item.mtx.Lock()
+		if !item.mtx.TryLock() {
+			element = element.Next()
+			continue
+		}
 		if item.exp.Before(now()) {
 			remove := element
 			element = element.Next()

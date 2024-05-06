@@ -242,6 +242,26 @@ func TestCache_GetOrRefresh_RefreshFailed_Concurrent(t *testing.T) {
 	<-done
 }
 
+func TestCache_GetOrRefresh_RefreshLongerThanTTL(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	calls := atomic.Int32{}
+	cache := New[string, string](ctx, 10*time.Millisecond, NewNopMetrics())
+	done := cache.SchedulePurge(time.Millisecond)
+
+	val, err := cache.GetOrRefresh("key0", func() (string, error) {
+		time.Sleep(15 * time.Millisecond)
+		calls.Add(1)
+		return "value0", nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, "value0", val)
+
+	requireKeyExists(t, cache, "key0", "value0")
+	cancel()
+	<-done
+}
+
 func TestCache_Purge_Manually(t *testing.T) {
 	cache := New[string, string](context.Background(), time.Nanosecond, NewNopMetrics())
 	cache.Set("key0", "value0")

@@ -31,7 +31,6 @@ type DefaultMetrics struct {
 }
 
 func NewDefaultMetrics(prefix string) *DefaultMetrics {
-
 	requestsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: fmt.Sprintf("%s_requests_total", prefix),
 		Help: "Cache request counter",
