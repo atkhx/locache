@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCache_Get(b *testing.B) {
@@ -70,8 +72,8 @@ func BenchmarkCache_Get(b *testing.B) {
 			purgeDone := cache.SchedulePurge(tc.purgeInterval)
 
 			schedule(ctx, tc.readInterval, func() { cache.Get(bullets[rand.Intn(tc.bulletsCount)]) })
-			schedule(ctx, tc.readInterval, func() { cache.Set(bullets[rand.Intn(tc.bulletsCount)], fmt.Sprintf("val %d", time.Now().UnixNano())) })
-			schedule(ctx, tc.readInterval, func() { cache.Delete(bullets[rand.Intn(tc.bulletsCount)]) })
+			schedule(ctx, tc.writeInterval, func() { cache.Set(bullets[rand.Intn(tc.bulletsCount)], fmt.Sprintf("val %d", time.Now().UnixNano())) })
+			schedule(ctx, tc.deleteInterval, func() { cache.Del(bullets[rand.Intn(tc.bulletsCount)]) })
 
 			for i := 0; i < b.N; i++ {
 				cache.Get(bullets[rand.Intn(tc.bulletsCount)])
@@ -116,7 +118,8 @@ func BenchmarkCache_GetOrRefresh(b *testing.B) {
 			readInterval:   10 * time.Millisecond,
 			writeInterval:  10 * time.Millisecond,
 			deleteInterval: 10 * time.Millisecond,
-			purgeInterval:  1 * time.Millisecond,
+			//purgeInterval:  1 * time.Millisecond,
+			purgeInterval: 1 * time.Second,
 		},
 	}
 
@@ -145,15 +148,15 @@ func BenchmarkCache_GetOrRefresh(b *testing.B) {
 			purgeDone := cache.SchedulePurge(tc.purgeInterval)
 
 			schedule(ctx, tc.readInterval, func() { cache.Get(bullets[rand.Intn(tc.bulletsCount)]) })
-			schedule(ctx, tc.readInterval, func() { cache.Set(bullets[rand.Intn(tc.bulletsCount)], fmt.Sprintf("val %d", time.Now().UnixNano())) })
-			schedule(ctx, tc.readInterval, func() { cache.Delete(bullets[rand.Intn(tc.bulletsCount)]) })
+			schedule(ctx, tc.writeInterval, func() { cache.Set(bullets[rand.Intn(tc.bulletsCount)], fmt.Sprintf("val %d", time.Now().UnixNano())) })
+			schedule(ctx, tc.deleteInterval, func() { cache.Del(bullets[rand.Intn(tc.bulletsCount)]) })
 
 			for i := 0; i < b.N; i++ {
-				key := bullets[rand.Intn(tc.bulletsCount)]
-				cache.GetOrRefresh(key, func() (string, error) {
-					time.Sleep(10 * time.Millisecond)
+				_, err := cache.GetOrRefresh(bullets[rand.Intn(tc.bulletsCount)], func() (string, error) {
+					//time.Sleep(10 * time.Millisecond)
 					return fmt.Sprintf("val 1 %d", time.Now().UnixNano()), nil
 				})
+				require.NoError(b, err)
 			}
 
 			cancel()
