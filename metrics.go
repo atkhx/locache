@@ -80,7 +80,7 @@ func (m *DefaultMetrics) AddErrors(method string, count int) {
 }
 
 func (m *DefaultMetrics) ObserveRequest(method string, timeStart time.Time) {
-	m.requestsTimeHist.With(prometheus.Labels{"method": method}).Observe(float64(now().Sub(timeStart)))
+	m.requestsTimeHist.With(prometheus.Labels{"method": method}).Observe(float64(now().Sub(timeStart).Milliseconds()))
 }
 
 func (m *DefaultMetrics) SetItemsCount(count int) {
