@@ -17,9 +17,9 @@ const (
 )
 
 type Metrics interface {
-	AddHits(method string, count int)
-	AddErrors(method string, count int)
-	AddMisses(method string, count int)
+	IncHits(method string)
+	IncErrors(method string)
+	IncMisses(method string)
 	ObserveRequest(method string, timeStart time.Time)
 	SetItemsCount(count int)
 }
@@ -58,25 +58,25 @@ func (m *DefaultMetrics) MustRegister() {
 	prometheus.MustRegister(m.requestsCounter, m.requestsTimeHist, m.itemsInCacheTotal)
 }
 
-func (m *DefaultMetrics) AddHits(method string, count int) {
+func (m *DefaultMetrics) IncHits(method string) {
 	m.requestsCounter.With(prometheus.Labels{
 		"method": method,
 		"status": "hits",
-	}).Add(float64(count))
+	}).Inc()
 }
 
-func (m *DefaultMetrics) AddMisses(method string, count int) {
+func (m *DefaultMetrics) IncMisses(method string) {
 	m.requestsCounter.With(prometheus.Labels{
 		"method": method,
 		"status": "misses",
-	}).Add(float64(count))
+	}).Inc()
 }
 
-func (m *DefaultMetrics) AddErrors(method string, count int) {
+func (m *DefaultMetrics) IncErrors(method string) {
 	m.requestsCounter.With(prometheus.Labels{
 		"method": method,
 		"status": "error",
-	}).Add(float64(count))
+	}).Inc()
 }
 
 func (m *DefaultMetrics) ObserveRequest(method string, timeStart time.Time) {
@@ -93,8 +93,8 @@ func NewNopMetrics() *NopMetrics {
 
 type NopMetrics struct{}
 
-func (n *NopMetrics) AddHits(_ string, _ int)              {}
-func (n *NopMetrics) AddMisses(_ string, _ int)            {}
-func (n *NopMetrics) AddErrors(_ string, _ int)            {}
+func (n *NopMetrics) IncHits(_ string)                     {}
+func (n *NopMetrics) IncMisses(_ string)                   {}
+func (n *NopMetrics) IncErrors(_ string)                   {}
 func (n *NopMetrics) ObserveRequest(_ string, _ time.Time) {}
 func (n *NopMetrics) SetItemsCount(_ int)                  {}

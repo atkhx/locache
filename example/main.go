@@ -1,31 +1,3 @@
-## locache
-
-This library provides a simple implementation of in-memory local cache with TTL.
-
-### Overview
-
-This library was created to solve a specific problem: reducing the number of repeatedly executed operations within a time window by locking on the key.
-
-### Key Features
-
-- Using generics to create cache for required key and data structure. 
-- Configurable TTL and purge interval.
-- Two levels of locks (the entire key map and individual item locks) minimize the impact of parallel operations.
-- The cache size is not limited.
-
-### Installation
-
-To install, use:
-
-```sh
-go get github.com/atkhx/locache
-```
-
-### Usage
-
-Check the [example](./example/main.go).
-
-```go
 package main
 
 import (
@@ -81,13 +53,3 @@ func main() {
 
 	log.Println("got user:", user)
 }
-
-```
-
-### Contributing
-
-Feel free to contribute to this project by opening issues or submitting pull requests.
-
-### License
-
-This project is licensed under the MIT License.

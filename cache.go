@@ -62,16 +62,16 @@ func (c *Cache[Key, Value]) Get(key Key) (Value, bool) {
 
 	element, found := c.index[key]
 	if !found {
-		c.mtr.AddMisses(MethodGet, 1)
+		c.mtr.IncMisses(MethodGet)
 		return val, false
 	}
 
 	if item := element.Value.(*Item[Key, Value]); item.IsValid() {
-		c.mtr.AddHits(MethodGet, 1)
+		c.mtr.IncHits(MethodGet)
 		return item.val, true
 	}
 
-	c.mtr.AddMisses(MethodGet, 1)
+	c.mtr.IncMisses(MethodGet)
 	return val, false
 }
 
@@ -138,7 +138,7 @@ func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error))
 	item.mtx.Lock()
 
 	if item.IsValid() {
-		c.mtr.AddHits(MethodGetOrRefresh, 1)
+		c.mtr.IncHits(MethodGetOrRefresh)
 		val := item.val
 		item.mtx.Unlock()
 		return val, nil
@@ -146,7 +146,7 @@ func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error))
 
 	val, err := refresh()
 	if err != nil {
-		c.mtr.AddErrors(MethodGetOrRefresh, 1)
+		c.mtr.IncErrors(MethodGetOrRefresh)
 		item.mtx.Unlock()
 		var emptyVal Value
 		return emptyVal, fmt.Errorf("refresh val: %w", err)
