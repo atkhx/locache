@@ -41,8 +41,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cache := locache.New[int64, *User](ctx, cacheTTL, locache.NewDefaultMetrics("users_cache"))
-	cache.SchedulePurge(cachePurgeInterval)
+	cache := locache.New[int64, *User](cacheTTL, locache.NewDefaultMetrics("users_cache"))
+	cache.SchedulePurge(ctx, cachePurgeInterval)
 
 	repo := NewUserRepository(cache)
 	user, err := repo.GetUser(777)

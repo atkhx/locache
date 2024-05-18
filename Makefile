@@ -1,4 +1,3 @@
-
 .PHONY: test
 test:
 	go clean -testcache
@@ -7,3 +6,6 @@ test:
 .PHONY: bench
 bench:
 	go test -bench  ./...
+
+lint:
+	golangci-lint run

@@ -27,7 +27,6 @@ func (i *Item[Key, Value]) IsValid() bool {
 }
 
 type Cache[Key comparable, Value any] struct {
-	ctx context.Context
 	ttl time.Duration
 	mtx sync.RWMutex
 	mtr Metrics
@@ -37,12 +36,10 @@ type Cache[Key comparable, Value any] struct {
 }
 
 func New[Key comparable, Value any](
-	ctx context.Context,
 	ttl time.Duration,
 	mtr Metrics,
 ) *Cache[Key, Value] {
 	return &Cache[Key, Value]{
-		ctx: ctx,
 		ttl: ttl,
 		mtr: mtr,
 
@@ -66,7 +63,7 @@ func (c *Cache[Key, Value]) Get(key Key) (Value, bool) {
 		return val, false
 	}
 
-	if item := element.Value.(*Item[Key, Value]); item.IsValid() {
+	if item := c.getItem(element); item.IsValid() {
 		c.mtr.IncHits(MethodGet)
 		return item.val, true
 	}
@@ -83,7 +80,7 @@ func (c *Cache[Key, Value]) Set(key Key, value Value) {
 	defer c.mtx.Unlock()
 
 	if element, found := c.index[key]; found {
-		item := element.Value.(*Item[Key, Value])
+		item := c.getItem(element)
 		item.set = true
 		item.val = value
 		item.exp = now().Add(c.ttl)
@@ -125,6 +122,7 @@ func (c *Cache[Key, Value]) getOrCreateElement(key Key) *list.Element {
 		})
 		c.index[key] = element
 	}
+
 	return element
 }
 
@@ -134,13 +132,15 @@ func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error))
 
 	element := c.getOrCreateElement(key)
 
-	item := element.Value.(*Item[Key, Value])
+	item := c.getItem(element)
 	item.mtx.Lock()
 
 	if item.IsValid() {
 		c.mtr.IncHits(MethodGetOrRefresh)
+
 		val := item.val
 		item.mtx.Unlock()
+
 		return val, nil
 	}
 
@@ -148,6 +148,7 @@ func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error))
 	if err != nil {
 		c.mtr.IncErrors(MethodGetOrRefresh)
 		item.mtx.Unlock()
+
 		var emptyVal Value
 		return emptyVal, fmt.Errorf("refresh val: %w", err)
 	}
@@ -164,13 +165,13 @@ func (c *Cache[Key, Value]) GetOrRefresh(key Key, refresh func() (Value, error))
 	return val, nil
 }
 
-func (c *Cache[Key, Value]) SchedulePurge(purgeInterval time.Duration) chan struct{} {
+func (c *Cache[Key, Value]) SchedulePurge(ctx context.Context, purgeInterval time.Duration) chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		for {
 			select {
-			case <-c.ctx.Done():
+			case <-ctx.Done():
 				return
 			case <-time.After(purgeInterval):
 				c.Purge()
@@ -188,7 +189,7 @@ func (c *Cache[Key, Value]) Purge() {
 	defer c.mtx.Unlock()
 
 	for element := c.items.Front(); element != nil; {
-		item := element.Value.(*Item[Key, Value])
+		item := c.getItem(element)
 		if !item.mtx.TryLock() {
 			element = element.Next()
 			continue
@@ -205,4 +206,8 @@ func (c *Cache[Key, Value]) Purge() {
 	}
 
 	c.mtr.SetItemsCount(c.items.Len())
+}
+
+func (c *Cache[Key, Value]) getItem(element *list.Element) *Item[Key, Value] {
+	return element.Value.(*Item[Key, Value]) //nolint:forcetypeassert
 }

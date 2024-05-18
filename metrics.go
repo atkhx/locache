@@ -1,7 +1,6 @@
 package locache
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,18 +31,18 @@ type DefaultMetrics struct {
 
 func NewDefaultMetrics(prefix string) *DefaultMetrics {
 	requestsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: fmt.Sprintf("%s_requests_total", prefix),
+		Name: prefix + "_requests_total",
 		Help: "Cache request counter",
 	}, []string{"method", "status"})
 
 	requestsTimeHist := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    fmt.Sprintf("%s_requests_time_ms", prefix),
+		Name:    prefix + "_requests_time_ms",
 		Help:    "Cache request timings",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"method"})
 
 	itemsInCacheTotal := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: fmt.Sprintf("%s_items_total", prefix),
+		Name: prefix + "_items_total",
 		Help: "Cache request counter",
 	})
 

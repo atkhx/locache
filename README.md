@@ -23,7 +23,7 @@ go get github.com/atkhx/locache
 
 ### Usage
 
-Check the [example](./example/main.go).
+Check the [example](./examples/main.go).
 
 ```go
 package main

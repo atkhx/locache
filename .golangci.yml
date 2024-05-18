@@ -1,0 +1,16 @@
+linters:
+  enable-all: true
+  disable:
+    - nlreturn
+    - depguard
+    - exhaustruct
+    - ireturn
+    - wsl
+    - gochecknoglobals
+
+run:
+  tests: false
+
+issues:
+  exclude-dirs:
+    - vendor$

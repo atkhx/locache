@@ -29,7 +29,7 @@ func requireKeyNotExists(t *testing.T, cache *testCache, key string) {
 }
 
 func TestCache_Get_KeyNotExists(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	requireKeyNotExists(t, cache, "key0")
 }
 
@@ -43,7 +43,7 @@ func requireCacheItems(t *testing.T, cache *testCache, expected []string) {
 }
 
 func TestCache_Get_KeyExists(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	cache.Set("key0", "value0")
 	cache.Set("key1", "value1")
 	cache.Set("key2", "value2")
@@ -54,13 +54,13 @@ func TestCache_Get_KeyExists(t *testing.T) {
 }
 
 func TestCache_Set_KeyNotExists(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	cache.Set("key0", "value0")
 	requireKeyExists(t, cache, "key0", "value0")
 }
 
 func TestCache_Set_KeyExists(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	cache.Set("key0", "value0")
 	cache.Set("key1", "value1")
 	cache.Set("key2", "value2")
@@ -83,13 +83,13 @@ func TestCache_Set_KeyExists(t *testing.T) {
 }
 
 func TestCache_Del_KeyNotExists(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	cache.Del("key0")
 	requireKeyNotExists(t, cache, "key0")
 }
 
 func TestCache_Del_KeyExists(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	cache.Set("key0", "value0")
 	cache.Set("key1", "value1")
 	cache.Set("key2", "value2")
@@ -118,7 +118,7 @@ func TestCache_Del_KeyExists(t *testing.T) {
 
 func TestCache_GetOrRefresh_KeyNotExists(t *testing.T) {
 	calls := atomic.Int32{}
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 
 	actual, err := cache.GetOrRefresh("key0", func() (string, error) {
 		calls.Add(1)
@@ -132,7 +132,7 @@ func TestCache_GetOrRefresh_KeyNotExists(t *testing.T) {
 }
 
 func TestCache_GetOrRefresh_KeyExistsAndValid(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	cache.Set("key0", "value0")
 	actual, err := cache.GetOrRefresh("key0", func() (string, error) {
 		panic("should never be called")
@@ -145,7 +145,7 @@ func TestCache_GetOrRefresh_KeyExistsAndValid(t *testing.T) {
 
 func TestCache_GetOrRefresh_KeyExistsAndNotValid(t *testing.T) {
 	calls := atomic.Int32{}
-	cache := New[string, string](context.Background(), 0, NewNopMetrics())
+	cache := New[string, string](0, NewNopMetrics())
 	cache.Set("key0", "value0")
 	// For testing purpose only
 	cache.ttl = time.Second
@@ -165,7 +165,7 @@ func TestCache_GetOrRefresh_RefreshFailed(t *testing.T) {
 	var originErr = fmt.Errorf("some error")
 
 	calls := atomic.Int32{}
-	cache := New[string, string](context.Background(), time.Second, NewNopMetrics())
+	cache := New[string, string](time.Second, NewNopMetrics())
 	actual, err := cache.GetOrRefresh("key0", func() (string, error) {
 		calls.Add(1)
 		return "", originErr
@@ -179,8 +179,8 @@ func TestCache_GetOrRefresh_RefreshFailed(t *testing.T) {
 func TestCache_GetOrRefresh_RefreshFailed_Concurrent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	calls := atomic.Int32{}
-	cache := New[string, string](ctx, time.Second, NewNopMetrics())
-	done := cache.SchedulePurge(time.Millisecond)
+	cache := New[string, string](time.Second, NewNopMetrics())
+	done := cache.SchedulePurge(ctx, time.Millisecond)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
@@ -246,8 +246,8 @@ func TestCache_GetOrRefresh_RefreshLongerThanTTL(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	calls := atomic.Int32{}
-	cache := New[string, string](ctx, 10*time.Millisecond, NewNopMetrics())
-	done := cache.SchedulePurge(time.Millisecond)
+	cache := New[string, string](10*time.Millisecond, NewNopMetrics())
+	done := cache.SchedulePurge(ctx, time.Millisecond)
 
 	val, err := cache.GetOrRefresh("key0", func() (string, error) {
 		time.Sleep(15 * time.Millisecond)
@@ -263,7 +263,7 @@ func TestCache_GetOrRefresh_RefreshLongerThanTTL(t *testing.T) {
 }
 
 func TestCache_Purge_Manually(t *testing.T) {
-	cache := New[string, string](context.Background(), time.Nanosecond, NewNopMetrics())
+	cache := New[string, string](time.Nanosecond, NewNopMetrics())
 	cache.Set("key0", "value0")
 	cache.Set("key1", "value1")
 	cache.Set("key2", "value2")
